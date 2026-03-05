@@ -1,0 +1,231 @@
+#!/usr/bin/env bash
+
+if [ "$1" == "--version" ]; then
+    echo "Metior FPL Manager version 1.0."
+    exit 0
+elif [ "$1" == "--make-crates" ]; then
+    echo "Loading..."
+else
+    echo "Unknown subcommand '$1'."
+    exit 1
+fi
+
+if [ -e "./crates" ]; then
+    echo "Skipping making crate folder."
+else
+    echo "Making crate folder..."
+    mkdir ./crates
+fi
+
+echo 'Writing math library "math"'
+echo
+cat <<'EOF' > ./crates/math
+func min arr@min 8 size@min 8
+    uva << 0;
+    uvc << 0;
+    min.arr :|
+        unsafe "mov rbx, [rax]"
+        unsafe "mov qword [uvc], rax"
+    loop ~> uva++ (uva <= min.size) : while
+        (uva - 1) : uvd;
+        min.arr :|
+        unsafe "mov rcx, [uvd]"
+        unsafe "mov rbx, [rax + rcx*8]"
+        unsafe "mov qword [uvb], rbx"
+        (uvb < uvc) : if uvb >> uvc; end if;
+    end while;
+    uvc >> return;
+end func;
+
+func max arr@max 8 size@max 8
+    uva << 0;
+    uvc << 0;
+    loop ~> uva++ (uva <= max.size) : while
+        (uva - 1) : uvd;
+        max.arr :|
+        unsafe "mov rcx, [uvd]"
+        unsafe "mov rbx, [rax + rcx*8]"
+        unsafe "mov qword [uvb], rbx"
+        (uvb > uvc) : if uvb >> uvc; end if;
+    end while;
+    uvc >> return;
+end func;
+
+func square value@square 8
+    (square.value * square.value) : return;
+end func;
+
+func cube value@cube 8
+    (cube.value * cube.value) : uvc (uvc * cube.value) : return;
+end func;
+
+structure Vec2
+    x@Vec2 8
+    y@Vec2 8
+
+func add_vector pointer@add_vector 8 pointer2@add_vector 8 result@add_vector 8
+    add_vector.pointer :| 8 |> uva;
+    add_vector.pointer2 :| 8 |> uvb;
+    (uva + uvb) : uvc;
+    add_vector.result :| uvc >|;
+    (add_vector.pointer+8) 8 |> uva;
+    (add_vector.pointer2+8) 8 |> uvb;
+    (uva + uvb) : uvc;
+    (add_vector.result+8) uvc >|;
+end func;
+EOF
+for i in {0..100}; do
+    echo -ne "\033[1A\033[2K"
+    echo "$i% Done"
+    sleep 0.01
+done
+echo 'Writing array utilities library "arrays"'
+echo
+cat <<'EOF' > ./crates/arrays
+structure Array
+    li@Array 8
+    data@Array 1024
+;
+
+func push pointer@push 8 value@push 8
+    (push.pointer+Array.li) 8 |> uvb (i*8):uvb;
+    (push.pointer+Array.data) : uva (uva+uvb) push.value >| 8;
+    (push.pointer+Array.li) 8 |> uvb++ (push.pointer+Array.li) uvb >| 8;
+end func;
+
+func pop pointer@pop 8
+    (pop.pointer+Array.li) 8 |> uvc-- (uvc*8):uvc;
+    (pop.pointer+Array.data) : uva (uva+uvc) 8 |> uvb;
+    (uvc/8):uvc (pop.pointer+Array.li) uvc >| 8;
+    uvb >> return;
+end func;
+EOF
+for i in {0..100}; do
+    echo -ne "\033[1A\033[2K"
+    echo "$i% Done"
+    sleep 0.01
+done
+echo 'Writing string utilities library "strings"'
+echo
+cat <<'EOF' > ./crates/strings
+func strcmp pointer1@strcmp 8 pointer2@strcmp 8 length@strcmp 8
+    uva << 0;
+    loop ~> uva++ (uva<=strcmp.length) : while
+        (uva-1):uvb;
+        0 :| : uvc >> uvd;
+        (strcmp.pointer1+uvb) 1 |> uvc;
+        (strcmp.pointer2+uvb) 1 |> uvd;
+        (uvc != uvd):if
+            return << 0;
+        end if;
+    end while;
+    return << 1;
+end func;
+EOF
+for i in {0..100}; do
+    echo -ne "\033[1A\033[2K"
+    echo "$i% Done"
+    sleep 0.01
+done
+echo 'Writing file utilities library "fileio"'
+echo
+cat <<'EOF' > ./crates/fileio
+structure File
+    name@File 32
+    fd@File 8
+    width@File 8
+    wr@File 8
+;
+
+var fint 8;
+var stdfile 512;
+
+func open f@open 8
+    open.f :|
+        unsafe "mov rbx, rax"
+        unsafe "mov rax, 2"
+        unsafe "mov rdi, rbx"
+        unsafe "mov rsi, 65"
+        unsafe "mov rdx, 0644o"
+        unsafe "syscall"
+        : uvc (open.f+32) uvc >| 8
+    ;
+end func;
+
+func zero f@zero 8
+    zero.f :|
+        (zero.f+32) 8 |> uvc
+        unsafe "mov rax, 77"
+        unsafe "mov rdi, qword [uvc]"
+        unsafe "mov rsi, 0"
+        unsafe "syscall"
+    ;
+end func;
+
+func write f@write 8
+    write.f :|
+        unsafe "mov rbx, rax"
+        unsafe "mov rax, 1"
+        unsafe "mov rdi, [rbx+32]"
+        unsafe "mov rcx, [rbx+48]"
+        unsafe "lea rsi, [stdfile_v+rcx]"
+        unsafe "mov rdx, qword [rbx+40]"
+        unsafe "syscall"
+        unsafe "mov rax, rbx"
+        :
+            uvd (uvd+48) 8 |> uvc
+            (uvd+40) 8 |> uvb
+            (uvc+uvb) : uvc (uvd+48) uvc >| 8
+    ;
+end func;
+
+func read f@read 8 result@read 8
+    read.f :|
+        unsafe "mov rbx, rax"
+        unsafe "mov rdi, qword [rbx+32]"
+        unsafe "mov rsi, qword [read__$$__result]"
+        unsafe "mov rdx, qword [rbx+40]"
+        unsafe "mov rax, 0"
+        unsafe "syscall"
+    ;
+end func;
+
+func close f@close 8
+    close.f :|
+        unsafe "mov rcx, [rax+32]"
+        unsafe "mov qword [fint_v], rcx"
+        unsafe "mov rax, 3"
+        unsafe "mov rdi, [fint_v]"
+        unsafe "syscall"
+    ;
+end func;
+EOF
+for i in {0..100}; do
+    echo -ne "\033[1A\033[2K"
+    echo "$i% Done"
+    sleep 0.01
+done
+echo 'Writing exit utilities library "exits"'
+echo
+cat <<'EOF'>./crates/exits
+func throw code@throw 8
+    (throw.code == 0) : if
+        stdout << "Try using exit instead of error"
+        end func;
+    end if;
+    unsafe "mov rax, 60"
+    unsafe "mov rdx, [throw__$$__code]"
+    unsafe "syscall"
+end func;
+
+func exit
+    unsafe "mov rax, 60"
+    unsafe "mov rdx, 0"
+    unsafe "syscall"
+end func;
+EOF
+for i in {0..100}; do
+    echo -ne "\033[1A\033[2K"
+    echo "$i% Done"
+    sleep 0.01
+done

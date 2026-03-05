@@ -1,0 +1,30 @@
+func min arr@min size@min
+    uva << 0;
+    uvc << 0;
+    min.arr :|
+        unsafe "mov rbx, [rax]"
+        unsafe "mov qword [uvc], rax"
+    loop ~> uva++ (uva <= min.size) : while
+        (uva - 1) : uvd;
+        min.arr :|
+        unsafe "mov rcx, [uvd]"
+        unsafe "mov rbx, [rax + rcx*8]"
+        unsafe "mov qword [uvb], rbx"
+        (uvb < uvc) : if uvb >> uvc; end if;
+    end while;
+    uvc >> return;
+end func;
+
+func max arr@max size@max
+    uva << 0;
+    uvc << 0;
+    loop ~> uva++ (uva <= max.size) : while
+        (uva - 1) : uvd;
+        max.arr :|
+        unsafe "mov rcx, [uvd]"
+        unsafe "mov rbx, [rax + rcx*8]"
+        unsafe "mov qword [uvb], rbx"
+        (uvb > uvc) : if uvb >> uvc; end if;
+    end while;
+    uvc >> return;
+end func;

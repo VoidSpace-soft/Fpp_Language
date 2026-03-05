@@ -1,0 +1,6 @@
+func push arr@push index@push value@push
+    unsafe "mov rax, [push__$$__arr]"
+    unsafe "mov rbx, [push__$$__index]"
+    unsafe "mov rcx, [push__$$__value]"
+    unsafe "mov qword [rax+rbx*8], rcx"
+end func
